@@ -2,15 +2,25 @@ package fr.diginamic.hello.modeles;
 
 public class Ville {
 
+    private int id;
     private String nom;
     private int population;
 
     public Ville() {
     }
 
-    public Ville(String nom, int population) {
+    public Ville(int id, String nom, int population) {
+        this.id = id;
         this.nom = nom;
         this.population = population;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getNom() {
