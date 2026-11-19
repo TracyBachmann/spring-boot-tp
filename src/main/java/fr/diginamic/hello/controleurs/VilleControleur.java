@@ -3,6 +3,7 @@ package fr.diginamic.hello.controleurs;
 import fr.diginamic.hello.exceptions.VilleException;
 import fr.diginamic.hello.modeles.Ville;
 import jakarta.annotation.PostConstruct;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -43,56 +44,32 @@ public class VilleControleur {
         return ResponseEntity.notFound().build();
     }
 
-    // Validate a city before inserting or updating it
-    private void verifierVille(Ville ville) throws VilleException {
-        if (ville == null) {
-            throw new VilleException("Les données de la ville sont obligatoires");
-        }
-
-        if (ville.getPopulation() < 10) {
-            throw new VilleException(
-                    "La ville doit avoir au moins 10 habitants"
-            );
-        }
-
-        String nom = ville.getNom();
-
-        if (nom == null || nom.codePoints()
-                .filter(Character::isLetter)
-                .count() < 2) {
-            throw new VilleException(
-                    "Le nom de la ville doit contenir au moins 2 lettres"
-            );
-        }
-    }
-
-    // Add a new city
+    // Add a city after validating its fields
     @PostMapping
     public ResponseEntity<String> ajouterVille(
-            @RequestBody Ville ville) throws VilleException {
+            @Valid @RequestBody Ville ville) throws VilleException {
 
-        verifierVille(ville);
+        String nom = ville.getNom().trim();
 
         for (Ville villeExistante : villes) {
-            if (villeExistante.getNom()
-                    .equalsIgnoreCase(ville.getNom().trim())) {
-
+            if (villeExistante.getNom().equalsIgnoreCase(nom)) {
                 throw new VilleException("La ville existe déjà");
             }
         }
 
-        ville.setNom(ville.getNom().trim());
+        ville.setNom(nom);
         ville.setId(prochainId++);
         villes.add(ville);
 
         return ResponseEntity.ok("Ville insérée avec succès");
     }
 
-    // Update a city by its ID
+    // Update a city after validating the request body
     @PutMapping("/{id}")
     public ResponseEntity<String> modifierVille(
             @PathVariable int id,
-            @RequestBody Ville villeModifiee) throws VilleException {
+            @Valid @RequestBody Ville villeModifiee)
+            throws VilleException {
 
         Ville villeExistante = null;
 
@@ -109,14 +86,11 @@ public class VilleControleur {
                     .body("Ville introuvable");
         }
 
-        verifierVille(villeModifiee);
-
         String nouveauNom = villeModifiee.getNom().trim();
 
         for (Ville ville : villes) {
             if (ville.getId() != id
                     && ville.getNom().equalsIgnoreCase(nouveauNom)) {
-
                 throw new VilleException("La ville existe déjà");
             }
         }
@@ -144,7 +118,7 @@ public class VilleControleur {
                 .body("Ville introuvable");
     }
 
-    // Search cities by the beginning of their name
+    // Search by the beginning of a city name
     @GetMapping("/recherche/nom")
     public List<Ville> rechercherParNom(
             @RequestParam String debut) throws VilleException {
