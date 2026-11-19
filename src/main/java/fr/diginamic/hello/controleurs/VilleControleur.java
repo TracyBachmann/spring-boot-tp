@@ -1,5 +1,6 @@
 package fr.diginamic.hello.controleurs;
 
+import fr.diginamic.hello.exceptions.VilleException;
 import fr.diginamic.hello.modeles.Ville;
 import jakarta.annotation.PostConstruct;
 import org.springframework.http.HttpStatus;
@@ -38,39 +39,104 @@ public class VilleControleur {
                 return ResponseEntity.ok(ville);
             }
         }
+
         return ResponseEntity.notFound().build();
+    }
+
+    // Validate a city before inserting or updating it
+    private void verifierVille(Ville ville) throws VilleException {
+        if (ville == null) {
+            throw new VilleException("Les données de la ville sont obligatoires");
+        }
+
+        if (ville.getPopulation() < 10) {
+            throw new VilleException(
+                    "La ville doit avoir au moins 10 habitants"
+            );
+        }
+
+        String nom = ville.getNom();
+
+        if (nom == null || nom.codePoints()
+                .filter(Character::isLetter)
+                .count() < 2) {
+            throw new VilleException(
+                    "Le nom de la ville doit contenir au moins 2 lettres"
+            );
+        }
     }
 
     // Add a new city
     @PostMapping
-    public ResponseEntity<String> ajouterVille(@RequestBody Ville ville) {
+    public ResponseEntity<String> ajouterVille(
+            @RequestBody Ville ville) throws VilleException {
+
+        verifierVille(ville);
+
         for (Ville villeExistante : villes) {
-            if (villeExistante.getNom().equalsIgnoreCase(ville.getNom())) {
-                return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body("La ville existe déjà");
+            if (villeExistante.getNom()
+                    .equalsIgnoreCase(ville.getNom().trim())) {
+
+                throw new VilleException("La ville existe déjà");
             }
         }
 
+        ville.setNom(ville.getNom().trim());
         ville.setId(prochainId++);
         villes.add(ville);
 
         return ResponseEntity.ok("Ville insérée avec succès");
     }
 
-    // Update an existing city
+    // Update a city by its ID
     @PutMapping("/{id}")
     public ResponseEntity<String> modifierVille(
             @PathVariable int id,
-            @RequestBody Ville villeModifiee) {
+            @RequestBody Ville villeModifiee) throws VilleException {
+
+        Ville villeExistante = null;
 
         for (Ville ville : villes) {
             if (ville.getId() == id) {
-                ville.setNom(villeModifiee.getNom());
-                ville.setPopulation(villeModifiee.getPopulation());
-
-                return ResponseEntity.ok("Ville modifiée avec succès");
+                villeExistante = ville;
+                break;
             }
+        }
+
+        if (villeExistante == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Ville introuvable");
+        }
+
+        verifierVille(villeModifiee);
+
+        String nouveauNom = villeModifiee.getNom().trim();
+
+        for (Ville ville : villes) {
+            if (ville.getId() != id
+                    && ville.getNom().equalsIgnoreCase(nouveauNom)) {
+
+                throw new VilleException("La ville existe déjà");
+            }
+        }
+
+        villeExistante.setNom(nouveauNom);
+        villeExistante.setPopulation(villeModifiee.getPopulation());
+
+        return ResponseEntity.ok("Ville modifiée avec succès");
+    }
+
+    // Delete a city by its ID
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> supprimerVille(@PathVariable int id) {
+
+        boolean supprimee = villes.removeIf(
+                ville -> ville.getId() == id
+        );
+
+        if (supprimee) {
+            return ResponseEntity.ok("Ville supprimée avec succès");
         }
 
         return ResponseEntity
@@ -78,18 +144,63 @@ public class VilleControleur {
                 .body("Ville introuvable");
     }
 
-    // Delete an existing city
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> supprimerVille(@PathVariable int id) {
-        for (Ville ville : villes) {
-            if (ville.getId() == id) {
-                villes.remove(ville);
-                return ResponseEntity.ok("Ville supprimée avec succès");
-            }
+    // Search cities by the beginning of their name
+    @GetMapping("/recherche/nom")
+    public List<Ville> rechercherParNom(
+            @RequestParam String debut) throws VilleException {
+
+        List<Ville> resultat = villes.stream()
+                .filter(ville -> ville.getNom()
+                        .toLowerCase()
+                        .startsWith(debut.toLowerCase()))
+                .toList();
+
+        if (resultat.isEmpty()) {
+            throw new VilleException(
+                    "Aucune ville dont le nom commence par "
+                            + debut + " n'a été trouvée"
+            );
         }
 
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body("Ville introuvable");
+        return resultat;
+    }
+
+    // Search cities with a population greater than min
+    @GetMapping("/recherche/population")
+    public List<Ville> rechercherParPopulation(
+            @RequestParam int min) throws VilleException {
+
+        List<Ville> resultat = villes.stream()
+                .filter(ville -> ville.getPopulation() > min)
+                .toList();
+
+        if (resultat.isEmpty()) {
+            throw new VilleException(
+                    "Aucune ville n'a une population supérieure à " + min
+            );
+        }
+
+        return resultat;
+    }
+
+    // Search cities with a population between min and max
+    @GetMapping("/recherche/intervalle")
+    public List<Ville> rechercherParIntervalle(
+            @RequestParam int min,
+            @RequestParam int max) throws VilleException {
+
+        List<Ville> resultat = villes.stream()
+                .filter(ville -> ville.getPopulation() > min
+                        && ville.getPopulation() < max)
+                .toList();
+
+        if (resultat.isEmpty()) {
+            throw new VilleException(
+                    "Aucune ville n'a une population comprise entre "
+                            + min + " et " + max
+            );
+        }
+
+        return resultat;
     }
 }
