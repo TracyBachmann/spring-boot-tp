@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "departement")
 public class Departement {
 
     @Id
@@ -14,7 +15,8 @@ public class Departement {
     @Column(nullable = false, unique = true, length = 10)
     private String code;
 
-    @Column(nullable = false)
+    // The supplied census SQL contains departments without a name.
+    @Column(nullable = true)
     private String nom;
 
     @OneToMany(mappedBy = "departement")

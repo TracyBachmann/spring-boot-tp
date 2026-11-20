@@ -1,6 +1,7 @@
 package fr.diginamic.hello.exceptions;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,5 +33,16 @@ public class GestionnaireExceptions {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(message);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<String> gererResponseStatusException(
+            ResponseStatusException exception) {
+
+        String message = exception.getReason();
+
+        return ResponseEntity
+                .status(exception.getStatusCode())
+                .body(message != null ? message : "Erreur lors de la requête");
     }
 }

@@ -3,6 +3,7 @@ package fr.diginamic.hello.modeles;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "ville")
 public class Ville {
 
     @Id
@@ -12,10 +13,11 @@ public class Ville {
     @Column(nullable = false)
     private String nom;
 
+    @Column(name = "nb_habs", nullable = false)
     private int population;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "departement_id", nullable = false)
+    @JoinColumn(name = "id_dept", nullable = false)
     private Departement departement;
 
     public Ville() {
@@ -59,4 +61,3 @@ public class Ville {
         this.departement = departement;
     }
 }
-
