@@ -1,34 +1,37 @@
 package fr.diginamic.hello.modeles;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.persistence.*;
 
+@Entity
 public class Ville {
 
-    private int id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @NotNull(message = "Le nom de la ville est obligatoire")
-    @Size(min = 2, message = "Le nom doit contenir au moins 2 caractères")
+    @Column(nullable = false)
     private String nom;
 
-    @Min(value = 1, message = "La ville doit avoir au moins 1 habitant")
     private int population;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "departement_id", nullable = false)
+    private Departement departement;
 
     public Ville() {
     }
 
-    public Ville(int id, String nom, int population) {
-        this.id = id;
+    public Ville(String nom, int population, Departement departement) {
         this.nom = nom;
         this.population = population;
+        this.departement = departement;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -47,4 +50,13 @@ public class Ville {
     public void setPopulation(int population) {
         this.population = population;
     }
+
+    public Departement getDepartement() {
+        return departement;
+    }
+
+    public void setDepartement(Departement departement) {
+        this.departement = departement;
+    }
 }
+
