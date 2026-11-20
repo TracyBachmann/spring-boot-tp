@@ -81,6 +81,16 @@ public class DepartementControleur {
     }
 
     /**
+     * Returns department cities with population strictly above min.
+     */
+    @GetMapping("/{id}/villes/min")
+    public List<VilleDto> villesAuDessusPopulation(
+            @PathVariable int id,
+            @RequestParam int min) {
+        return villeService.villesAuDessusPopulation(id, min);
+    }
+
+    /**
      * Returns cities in a given population interval.
      */
     @GetMapping("/{id}/villes")

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/villes")
@@ -23,8 +24,10 @@ public class VilleControleur {
      * Returns all cities.
      */
     @GetMapping
-    public List<VilleDto> getVilles() {
-        return villeService.getVilles();
+    public Page<VilleDto> getVilles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return villeService.getVilles(page, size);
     }
 
     /**

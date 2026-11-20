@@ -7,6 +7,9 @@ import fr.diginamic.hello.repositories.DepartementRepository;
 import fr.diginamic.hello.repositories.VilleRepository;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,8 +56,14 @@ public class VilleService {
      * Returns all cities.
      */
     @Transactional(readOnly = true)
-    public List<VilleDto> getVilles() {
-        return toDtoList(villeRepository.findAllByOrderByIdAsc());
+    public Page<VilleDto> getVilles(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Pagination invalide (size entre 1 et 100)"
+            );
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+        return villeRepository.findAll(pageable).map(this::toDto);
     }
 
     /**
@@ -146,13 +155,14 @@ public class VilleService {
         verifierNom(dto);
         String nom = dto.getNom().trim();
 
-        if (villeRepository.existsByNomIgnoreCase(nom)) {
+        Departement departement = trouverDepartement(dto);
+
+        if (villeRepository.existsByNomIgnoreCaseAndDepartementId(
+                nom, departement.getId())) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "La ville existe déjà"
+                    HttpStatus.BAD_REQUEST, "La ville existe déjà dans ce département"
             );
         }
-
-        Departement departement = trouverDepartement(dto);
 
         Ville ville = new Ville(nom, dto.getPopulation(), departement);
         return toDto(villeRepository.saveAndFlush(ville));
@@ -168,13 +178,14 @@ public class VilleService {
 
         String nom = dto.getNom().trim();
 
-        if (villeRepository.existsByNomIgnoreCaseAndIdNot(nom, id)) {
+        Departement departement = trouverDepartement(dto);
+
+        if (villeRepository.existsByNomIgnoreCaseAndDepartementIdAndIdNot(
+                nom, departement.getId(), id)) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "La ville existe déjà"
+                    HttpStatus.BAD_REQUEST, "La ville existe déjà dans ce département"
             );
         }
-
-        Departement departement = trouverDepartement(dto);
 
         ville.setNom(nom);
         ville.setPopulation(dto.getPopulation());
@@ -202,7 +213,7 @@ public class VilleService {
     @Transactional(readOnly = true)
     public List<VilleDto> rechercherParPopulation(int min) {
         return toDtoList(
-                villeRepository.findByPopulationGreaterThan(min)
+                villeRepository.findByPopulationGreaterThanOrderByPopulationDesc(min)
         );
     }
 
@@ -216,7 +227,7 @@ public class VilleService {
 
         return toDtoList(
                 villeRepository
-                        .findByPopulationGreaterThanAndPopulationLessThan(
+                        .findByPopulationGreaterThanAndPopulationLessThanOrderByPopulationDesc(
                                 min, max)
         );
     }
@@ -250,7 +261,7 @@ public class VilleService {
 
         verifierDepartement(departementId);
 
-        if (min > max) {
+        if (min >= max) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Intervalle invalide"
             );
@@ -258,8 +269,18 @@ public class VilleService {
 
         return toDtoList(
                 villeRepository
-                        .findByDepartementIdAndPopulationBetweenOrderByPopulationDescIdAsc(
+                        .findByDepartementIdAndPopulationGreaterThanAndPopulationLessThanOrderByPopulationDesc(
                                 departementId, min, max)
+        );
+    }
+
+    /** Returns department cities whose population exceeds min. */
+    @Transactional(readOnly = true)
+    public List<VilleDto> villesAuDessusPopulation(int departementId, int min) {
+        verifierDepartement(departementId);
+        return toDtoList(
+                villeRepository.findByDepartementIdAndPopulationGreaterThanOrderByPopulationDesc(
+                        departementId, min)
         );
     }
 
