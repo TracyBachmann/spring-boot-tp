@@ -3,6 +3,7 @@ package fr.diginamic.hello.controleurs;
 import fr.diginamic.hello.dto.DepartementDto;
 import fr.diginamic.hello.dto.VilleDto;
 import fr.diginamic.hello.services.DepartementService;
+import fr.diginamic.hello.services.ExportService;
 import fr.diginamic.hello.services.VilleService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,13 +33,16 @@ public class DepartementControleur {
 
     private final DepartementService departementService;
     private final VilleService villeService;
+    private final ExportService exportService;
 
     public DepartementControleur(
             DepartementService departementService,
-            VilleService villeService) {
+            VilleService villeService,
+            ExportService exportService) {
 
         this.departementService = departementService;
         this.villeService = villeService;
+        this.exportService = exportService;
     }
 
     /**
@@ -64,12 +70,9 @@ public class DepartementControleur {
     }
 
     /**
-     * Finds a department by its identifier.
+     * Returns a department by its identifier.
      */
-    @Operation(
-            summary = "Get a department by ID",
-            description = "Returns the department matching the given ID."
-    )
+    @Operation(summary = "Get a department by ID")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -97,21 +100,13 @@ public class DepartementControleur {
     }
 
     /**
-     * Creates a new department.
+     * Creates a department.
      */
-    @Operation(
-            summary = "Create a department",
-            description = "Creates a department using its code and name."
-    )
+    @Operation(summary = "Create a department")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Department created",
-                    content = @Content(
-                            schema = @Schema(
-                                    implementation = DepartementDto.class
-                            )
-                    )
+                    description = "Department created"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -128,19 +123,11 @@ public class DepartementControleur {
     /**
      * Updates an existing department.
      */
-    @Operation(
-            summary = "Update a department",
-            description = "Updates the code and name of an existing department."
-    )
+    @Operation(summary = "Update a department")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Department updated",
-                    content = @Content(
-                            schema = @Schema(
-                                    implementation = DepartementDto.class
-                            )
-                    )
+                    description = "Department updated"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -168,7 +155,7 @@ public class DepartementControleur {
      */
     @Operation(
             summary = "Delete a department",
-            description = "Deletes a department only if it contains no cities."
+            description = "Deletes a department only if it has no cities."
     )
     @ApiResponses({
             @ApiResponse(
@@ -201,7 +188,7 @@ public class DepartementControleur {
      */
     @Operation(
             summary = "Get the largest cities in a department",
-            description = "Returns up to n cities sorted by population descending."
+            description = "Returns up to n cities sorted by population."
     )
     @ApiResponses({
             @ApiResponse(
@@ -234,11 +221,11 @@ public class DepartementControleur {
     }
 
     /**
-     * Returns cities whose population exceeds the given threshold.
+     * Returns department cities above a population threshold.
      */
     @Operation(
             summary = "Get cities above a population threshold",
-            description = "Returns department cities with population strictly greater than min."
+            description = "Returns cities with population strictly above min."
     )
     @ApiResponses({
             @ApiResponse(
@@ -271,7 +258,7 @@ public class DepartementControleur {
      */
     @Operation(
             summary = "Get cities in a population interval",
-            description = "Returns department cities with population strictly between min and max."
+            description = "Returns cities strictly between min and max."
     )
     @ApiResponses({
             @ApiResponse(
@@ -308,5 +295,51 @@ public class DepartementControleur {
         return villeService.villesParPopulationEtDepartement(
                 id, min, max
         );
+    }
+
+    /**
+     * Exports a department and its cities as a PDF document.
+     */
+    @Operation(
+            summary = "Export a department to PDF",
+            description = "Downloads the department name, code and city list."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "PDF generated successfully",
+                    content = @Content(
+                            mediaType = "application/pdf"
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Department code not found"
+            )
+    })
+    @GetMapping(
+            value = "/{code}/export/pdf",
+            produces = "application/pdf"
+    )
+    public ResponseEntity<byte[]> exporterPdf(
+            @Parameter(
+                    description = "Department code, not its database ID",
+                    example = "67"
+            )
+            @PathVariable String code) {
+
+        byte[] contenu = exportService.exporterDepartementPdf(code);
+
+        String nomFichier = "departement-"
+                + code.replaceAll("[^A-Za-z0-9_-]", "_")
+                + ".pdf";
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + nomFichier + "\""
+                )
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(contenu);
     }
 }

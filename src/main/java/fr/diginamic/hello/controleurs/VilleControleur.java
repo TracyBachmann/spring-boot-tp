@@ -1,6 +1,7 @@
 package fr.diginamic.hello.controleurs;
 
 import fr.diginamic.hello.dto.VilleDto;
+import fr.diginamic.hello.services.ExportService;
 import fr.diginamic.hello.services.VilleService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,9 +30,14 @@ import java.util.List;
 public class VilleControleur {
 
     private final VilleService villeService;
+    private final ExportService exportService;
 
-    public VilleControleur(VilleService villeService) {
+    public VilleControleur(
+            VilleService villeService,
+            ExportService exportService) {
+
         this.villeService = villeService;
+        this.exportService = exportService;
     }
 
     /**
@@ -37,27 +45,27 @@ public class VilleControleur {
      */
     @Operation(
             summary = "Get paginated cities",
-            description = "Returns cities in pages, ordered by identifier."
+            description = "Returns cities ordered by identifier."
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Page of cities retrieved successfully"
+                    description = "Page retrieved successfully"
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Invalid page number or page size"
+                    description = "Invalid pagination parameters"
             )
     })
     @GetMapping
     public Page<VilleDto> getVilles(
             @Parameter(
-                    description = "Page number, starting from zero",
+                    description = "Page number starting from zero",
                     example = "0"
             )
             @RequestParam(defaultValue = "0") int page,
             @Parameter(
-                    description = "Number of cities per page (1 to 100)",
+                    description = "Page size between 1 and 100",
                     example = "20"
             )
             @RequestParam(defaultValue = "20") int size) {
@@ -66,12 +74,9 @@ public class VilleControleur {
     }
 
     /**
-     * Finds a city by its identifier.
+     * Returns a city by its identifier.
      */
-    @Operation(
-            summary = "Get a city by ID",
-            description = "Returns the city matching the given identifier."
-    )
+    @Operation(summary = "Get a city by ID")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -91,7 +96,7 @@ public class VilleControleur {
     public VilleDto getVille(
             @Parameter(
                     description = "City identifier",
-                    example = "13327"
+                    example = "1"
             )
             @PathVariable int id) {
 
@@ -101,19 +106,11 @@ public class VilleControleur {
     /**
      * Creates a city linked to a department.
      */
-    @Operation(
-            summary = "Create a city",
-            description = "Creates a city and associates it with a department."
-    )
+    @Operation(summary = "Create a city")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "City created",
-                    content = @Content(
-                            schema = @Schema(
-                                    implementation = VilleDto.class
-                            )
-                    )
+                    description = "City created"
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -134,23 +131,15 @@ public class VilleControleur {
     /**
      * Updates an existing city.
      */
-    @Operation(
-            summary = "Update a city",
-            description = "Updates a city's name, population and department."
-    )
+    @Operation(summary = "Update a city")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "City updated",
-                    content = @Content(
-                            schema = @Schema(
-                                    implementation = VilleDto.class
-                            )
-                    )
+                    description = "City updated"
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Invalid city data or duplicate city"
+                    description = "Invalid city data"
             ),
             @ApiResponse(
                     responseCode = "404",
@@ -161,7 +150,7 @@ public class VilleControleur {
     public VilleDto modifierVille(
             @Parameter(
                     description = "City identifier",
-                    example = "13327"
+                    example = "1"
             )
             @PathVariable int id,
             @Valid @RequestBody VilleDto ville) {
@@ -172,10 +161,7 @@ public class VilleControleur {
     /**
      * Deletes a city.
      */
-    @Operation(
-            summary = "Delete a city",
-            description = "Deletes the city matching the given identifier."
-    )
+    @Operation(summary = "Delete a city")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "204",
@@ -190,7 +176,7 @@ public class VilleControleur {
     public ResponseEntity<Void> supprimerVille(
             @Parameter(
                     description = "City identifier",
-                    example = "13327"
+                    example = "1"
             )
             @PathVariable int id) {
 
@@ -201,10 +187,7 @@ public class VilleControleur {
     /**
      * Searches cities by the beginning of their name.
      */
-    @Operation(
-            summary = "Search cities by name",
-            description = "Returns cities whose names start with the given prefix."
-    )
+    @Operation(summary = "Search cities by name")
     @ApiResponse(
             responseCode = "200",
             description = "Search completed successfully"
@@ -224,8 +207,7 @@ public class VilleControleur {
      * Searches cities above a population threshold.
      */
     @Operation(
-            summary = "Search cities by minimum population",
-            description = "Returns cities above the given population, sorted descending."
+            summary = "Search cities by minimum population"
     )
     @ApiResponse(
             responseCode = "200",
@@ -246,8 +228,7 @@ public class VilleControleur {
      * Searches cities within a population interval.
      */
     @Operation(
-            summary = "Search cities by population interval",
-            description = "Returns cities strictly between min and max, sorted descending."
+            summary = "Search cities by population interval"
     )
     @ApiResponses({
             @ApiResponse(
@@ -273,5 +254,43 @@ public class VilleControleur {
             @RequestParam int max) {
 
         return villeService.rechercherParIntervalle(min, max);
+    }
+
+    /**
+     * Exports cities above a population threshold as CSV.
+     */
+    @Operation(
+            summary = "Export cities to CSV",
+            description = "Downloads cities with a population greater than min."
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "CSV file generated successfully",
+            content = @Content(
+                    mediaType = "text/csv"
+            )
+    )
+    @GetMapping(
+            value = "/export/csv",
+            produces = "text/csv"
+    )
+    public ResponseEntity<byte[]> exporterCsv(
+            @Parameter(
+                    description = "Minimum population (exclusive)",
+                    example = "100000"
+            )
+            @RequestParam int min) {
+
+        byte[] contenu = exportService.exporterVillesCsv(min);
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"villes.csv\""
+                )
+                .contentType(
+                        new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8)
+                )
+                .body(contenu);
     }
 }
