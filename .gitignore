@@ -1,8 +1,13 @@
+
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Generated logs ###
+logs/
+*.log
 
 ### STS ###
 .apt_generated
@@ -31,3 +36,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local secrets ###
+.env
+.env.*
+!.env.example
+application-local.properties
