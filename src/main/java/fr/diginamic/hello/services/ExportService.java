@@ -1,7 +1,7 @@
+
 package fr.diginamic.hello.services;
 
 import com.itextpdf.text.BaseColor;
-import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Element;
@@ -10,13 +10,12 @@ import com.itextpdf.text.PageSize;
 import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.Phrase;
 import com.itextpdf.text.Rectangle;
-import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.ColumnText;
 import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfPageEventHelper;
 import com.itextpdf.text.pdf.PdfWriter;
-import com.itextpdf.text.pdf.ColumnText;
 
 import fr.diginamic.hello.dto.DepartementDto;
 import fr.diginamic.hello.dto.VilleDto;
@@ -107,7 +106,9 @@ public class ExportService {
 
             DepartementDto departement = code == null
                     ? null
-                    : departements.get(code.toUpperCase(Locale.ROOT));
+                    : departements.get(
+                    code.toUpperCase(Locale.ROOT)
+            );
 
             String nomDepartement = departement == null
                     ? ""
@@ -127,7 +128,7 @@ public class ExportService {
     }
 
     /**
-     * Escapes a CSV value and limits spreadsheet formula injection.
+     * Escapes CSV values and limits spreadsheet formula injection.
      */
     private String echapperCsv(String valeur) {
 
@@ -146,7 +147,7 @@ public class ExportService {
     }
 
     /**
-     * Creates a styled PDF containing the department and all its cities.
+     * Creates a styled PDF containing the department and its cities.
      *
      * @param code official department code
      * @return PDF file content
@@ -164,7 +165,9 @@ public class ExportService {
                 departementService.getDepartements()
                         .stream()
                         .filter(d -> d.getCode() != null)
-                        .filter(d -> d.getCode().equalsIgnoreCase(code.trim()))
+                        .filter(d -> d.getCode().equalsIgnoreCase(
+                                code.trim()
+                        ))
                         .findFirst()
                         .orElseThrow(() -> new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
@@ -193,21 +196,24 @@ public class ExportService {
 
         if (nomDepartement == null
                 || nomDepartement.isBlank()) {
-            nomDepartement = "Département " + departement.getCode();
+            nomDepartement =
+                    "Département " + departement.getCode();
         }
 
         long populationTotale = villes.stream()
                 .mapToLong(VilleDto::getPopulation)
                 .sum();
 
-        ByteArrayOutputStream sortie = new ByteArrayOutputStream();
+        ByteArrayOutputStream sortie =
+                new ByteArrayOutputStream();
 
+        // Compact margins leave more room for the city table.
         Document document = new Document(
                 PageSize.A4,
                 48,
                 48,
-                86,
-                62
+                78,
+                52
         );
 
         try {
@@ -241,8 +247,6 @@ public class ExportService {
 
             ajouterTableauVilles(document, villes);
 
-            ajouterNoteFinale(document);
-
         } catch (DocumentException exception) {
             throw new IllegalStateException(
                     "Erreur lors de la génération du PDF",
@@ -266,32 +270,42 @@ public class ExportService {
             String code) throws DocumentException {
 
         Font eyebrowFont = new Font(
-                Font.FontFamily.HELVETICA, 9, Font.BOLD, TEAL
+                Font.FontFamily.HELVETICA,
+                9,
+                Font.BOLD,
+                TEAL
         );
 
         Font titleFont = new Font(
-                Font.FontFamily.HELVETICA, 27, Font.BOLD, NAVY
+                Font.FontFamily.HELVETICA,
+                27,
+                Font.BOLD,
+                NAVY
         );
 
         Font subtitleFont = new Font(
-                Font.FontFamily.HELVETICA, 10, Font.NORMAL, SLATE
+                Font.FontFamily.HELVETICA,
+                10,
+                Font.NORMAL,
+                SLATE
         );
 
         Paragraph eyebrow = new Paragraph(
                 "FICHE DÉPARTEMENTALE  /  CODE " + code,
                 eyebrowFont
         );
-        eyebrow.setSpacingAfter(10);
+        eyebrow.setSpacingAfter(8);
         document.add(eyebrow);
 
         Paragraph titre = new Paragraph(nom, titleFont);
-        titre.setLeading(33);
-        titre.setSpacingAfter(10);
+        titre.setLeading(32);
+        titre.setSpacingAfter(8);
         document.add(titre);
 
         String date = LocalDate.now().format(
                 DateTimeFormatter.ofPattern(
-                        "dd MMMM yyyy", FRENCH
+                        "dd MMMM yyyy",
+                        FRENCH
                 )
         );
 
@@ -301,7 +315,7 @@ public class ExportService {
                 subtitleFont
         );
 
-        sousTitre.setSpacingAfter(24);
+        sousTitre.setSpacingAfter(18);
         document.add(sousTitre);
     }
 
@@ -317,8 +331,10 @@ public class ExportService {
 
         PdfPTable indicateurs = new PdfPTable(3);
         indicateurs.setWidthPercentage(100);
-        indicateurs.setWidths(new float[]{1, 1, 1.4f});
-        indicateurs.setSpacingAfter(28);
+        indicateurs.setWidths(
+                new float[]{1, 1, 1.4f}
+        );
+        indicateurs.setSpacingAfter(19);
 
         indicateurs.addCell(creerIndicateur(
                 "CODE DÉPARTEMENT",
@@ -346,24 +362,36 @@ public class ExportService {
             String valeur) {
 
         Font labelFont = new Font(
-                Font.FontFamily.HELVETICA, 8, Font.BOLD, SLATE
+                Font.FontFamily.HELVETICA,
+                8,
+                Font.BOLD,
+                SLATE
         );
 
         Font valueFont = new Font(
-                Font.FontFamily.HELVETICA, 19, Font.BOLD, NAVY
+                Font.FontFamily.HELVETICA,
+                19,
+                Font.BOLD,
+                NAVY
         );
 
         PdfPCell cellule = new PdfPCell();
         cellule.setBackgroundColor(LIGHT);
         cellule.setBorderColor(WHITE);
         cellule.setBorderWidth(4);
-        cellule.setPadding(13);
+        cellule.setPadding(11);
 
-        Paragraph label = new Paragraph(libelle, labelFont);
-        label.setSpacingAfter(8);
+        Paragraph label = new Paragraph(
+                libelle,
+                labelFont
+        );
+        label.setSpacingAfter(6);
 
-        Paragraph value = new Paragraph(valeur, valueFont);
-        value.setLeading(24);
+        Paragraph value = new Paragraph(
+                valeur,
+                valueFont
+        );
+        value.setLeading(23);
 
         cellule.addElement(label);
         cellule.addElement(value);
@@ -380,39 +408,56 @@ public class ExportService {
     ) throws DocumentException {
 
         Font sectionFont = new Font(
-                Font.FontFamily.HELVETICA, 15, Font.BOLD, NAVY
+                Font.FontFamily.HELVETICA,
+                15,
+                Font.BOLD,
+                NAVY
         );
 
         Font descriptionFont = new Font(
-                Font.FontFamily.HELVETICA, 9, Font.NORMAL, SLATE
+                Font.FontFamily.HELVETICA,
+                9,
+                Font.NORMAL,
+                SLATE
         );
 
         Paragraph section = new Paragraph(
                 "Villes du département",
                 sectionFont
         );
-        section.setSpacingAfter(6);
+        section.setSpacingAfter(4);
         document.add(section);
 
         Paragraph description = new Paragraph(
                 "Classement par population décroissante",
                 descriptionFont
         );
-        description.setSpacingAfter(14);
+        description.setSpacingAfter(10);
         document.add(description);
 
         PdfPTable tableau = new PdfPTable(3);
         tableau.setWidthPercentage(100);
-        tableau.setWidths(new float[]{0.7f, 4.2f, 1.8f});
+        tableau.setWidths(
+                new float[]{0.7f, 4.2f, 1.8f}
+        );
         tableau.setHeaderRows(1);
-        tableau.setSpacingAfter(18);
+        tableau.setSpacingAfter(0);
         tableau.setSplitRows(true);
         tableau.setSplitLate(false);
 
-        tableau.addCell(creerEntete("#", Element.ALIGN_CENTER));
-        tableau.addCell(creerEntete("VILLE", Element.ALIGN_LEFT));
         tableau.addCell(creerEntete(
-                "HABITANTS", Element.ALIGN_RIGHT
+                "#",
+                Element.ALIGN_CENTER
+        ));
+
+        tableau.addCell(creerEntete(
+                "VILLE",
+                Element.ALIGN_LEFT
+        ));
+
+        tableau.addCell(creerEntete(
+                "HABITANTS",
+                Element.ALIGN_RIGHT
         ));
 
         int rang = 1;
@@ -453,8 +498,10 @@ public class ExportService {
                     new Phrase("Aucune ville recensée")
             );
             vide.setColspan(3);
-            vide.setPadding(14);
-            vide.setHorizontalAlignment(Element.ALIGN_CENTER);
+            vide.setPadding(12);
+            vide.setHorizontalAlignment(
+                    Element.ALIGN_CENTER
+            );
             tableau.addCell(vide);
         }
 
@@ -469,7 +516,10 @@ public class ExportService {
             int alignement) {
 
         Font font = new Font(
-                Font.FontFamily.HELVETICA, 9, Font.BOLD, WHITE
+                Font.FontFamily.HELVETICA,
+                9,
+                Font.BOLD,
+                WHITE
         );
 
         PdfPCell cellule = new PdfPCell(
@@ -478,18 +528,20 @@ public class ExportService {
 
         cellule.setBackgroundColor(NAVY);
         cellule.setBorder(Rectangle.NO_BORDER);
-        cellule.setPaddingTop(11);
-        cellule.setPaddingBottom(11);
+        cellule.setPaddingTop(8);
+        cellule.setPaddingBottom(8);
         cellule.setPaddingLeft(10);
         cellule.setPaddingRight(10);
         cellule.setHorizontalAlignment(alignement);
-        cellule.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cellule.setVerticalAlignment(
+                Element.ALIGN_MIDDLE
+        );
 
         return cellule;
     }
 
     /**
-     * Creates a styled city table cell.
+     * Creates a compact, styled city table cell.
      */
     private PdfPCell creerCellule(
             String texte,
@@ -499,7 +551,7 @@ public class ExportService {
 
         Font font = new Font(
                 Font.FontFamily.HELVETICA,
-                10,
+                9,
                 important ? Font.BOLD : Font.NORMAL,
                 NAVY
         );
@@ -512,45 +564,34 @@ public class ExportService {
         cellule.setBorder(Rectangle.BOTTOM);
         cellule.setBorderColor(BORDER);
         cellule.setBorderWidth(0.4f);
-        cellule.setPaddingTop(9);
-        cellule.setPaddingBottom(9);
+
+        // Compact row padding avoids unnecessary page breaks.
+        cellule.setPaddingTop(6);
+        cellule.setPaddingBottom(6);
         cellule.setPaddingLeft(10);
         cellule.setPaddingRight(10);
+
         cellule.setHorizontalAlignment(alignement);
-        cellule.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cellule.setVerticalAlignment(
+                Element.ALIGN_MIDDLE
+        );
 
         return cellule;
     }
 
     /**
-     * Adds a short explanation of the source data.
-     */
-    private void ajouterNoteFinale(
-            Document document) throws DocumentException {
-
-        Font noteFont = new Font(
-                Font.FontFamily.HELVETICA, 8, Font.ITALIC, SLATE
-        );
-
-        Paragraph note = new Paragraph(
-                "Source : base de données Recensement "
-                        + "de l'application API Recensement. "
-                        + "Les données correspondent à l'état "
-                        + "de la base lors de l'export.",
-                noteFont
-        );
-
-        note.setSpacingBefore(4);
-        document.add(note);
-    }
-
-    /**
-     * Formats population figures for French readers.
+     * Formats population values with PDF-compatible spaces.
      */
     private String formaterNombre(long valeur) {
-        return NumberFormat
+
+        String resultat = NumberFormat
                 .getIntegerInstance(FRENCH)
                 .format(valeur);
+
+        // Built-in Helvetica may not render Unicode no-break spaces.
+        return resultat
+                .replace('\u202F', ' ')
+                .replace('\u00A0', ' ');
     }
 
     /**
@@ -570,11 +611,14 @@ public class ExportService {
             Rectangle page = document.getPageSize();
 
             float left = document.left();
-            float right = page.getRight() - document.rightMargin();
+            float right =
+                    page.getRight()
+                            - document.rightMargin();
+
             float top = page.getTop();
             float bottom = page.getBottom();
 
-            // Top navigation band.
+            // Draw the top navigation band.
             canvas.saveState();
             canvas.setColorFill(NAVY);
             canvas.rectangle(
@@ -585,7 +629,7 @@ public class ExportService {
             );
             canvas.fill();
 
-            // Small accent line below the band.
+            // Draw the turquoise accent line.
             canvas.setColorFill(TEAL);
             canvas.rectangle(
                     page.getLeft(),
@@ -596,72 +640,70 @@ public class ExportService {
             canvas.fill();
             canvas.restoreState();
 
-            try {
-                Font headerFont = new Font(
-                        Font.FontFamily.HELVETICA,
-                        10,
-                        Font.BOLD,
-                        WHITE
-                );
+            Font headerFont = new Font(
+                    Font.FontFamily.HELVETICA,
+                    10,
+                    Font.BOLD,
+                    WHITE
+            );
 
-                Font footerFont = new Font(
-                        Font.FontFamily.HELVETICA,
-                        8,
-                        Font.NORMAL,
-                        SLATE
-                );
+            Font footerFont = new Font(
+                    Font.FontFamily.HELVETICA,
+                    8,
+                    Font.NORMAL,
+                    SLATE
+            );
 
-                ColumnText.showTextAligned(
-                        canvas,
-                        Element.ALIGN_LEFT,
-                        new Phrase(
-                                "RECENSEMENT  /  RAPPORT TERRITORIAL",
-                                headerFont
-                        ),
-                        left,
-                        top - 35,
-                        0
-                );
+            ColumnText.showTextAligned(
+                    canvas,
+                    Element.ALIGN_LEFT,
+                    new Phrase(
+                            "RECENSEMENT  /  RAPPORT TERRITORIAL",
+                            headerFont
+                    ),
+                    left,
+                    top - 35,
+                    0
+            );
 
-                // Bottom separator.
-                canvas.saveState();
-                canvas.setColorStroke(BORDER);
-                canvas.setLineWidth(0.7f);
-                canvas.moveTo(left, bottom + 45);
-                canvas.lineTo(right, bottom + 45);
-                canvas.stroke();
-                canvas.restoreState();
+            // Draw the footer separator.
+            canvas.saveState();
+            canvas.setColorStroke(BORDER);
+            canvas.setLineWidth(0.7f);
+            canvas.moveTo(
+                    left,
+                    bottom + 45
+            );
+            canvas.lineTo(
+                    right,
+                    bottom + 45
+            );
+            canvas.stroke();
+            canvas.restoreState();
 
-                ColumnText.showTextAligned(
-                        canvas,
-                        Element.ALIGN_LEFT,
-                        new Phrase(
-                                "API RECENSEMENT  -  DOCUMENT GÉNÉRÉ",
-                                footerFont
-                        ),
-                        left,
-                        bottom + 28,
-                        0
-                );
+            ColumnText.showTextAligned(
+                    canvas,
+                    Element.ALIGN_LEFT,
+                    new Phrase(
+                            "API RECENSEMENT  -  DOCUMENT GÉNÉRÉ",
+                            footerFont
+                    ),
+                    left,
+                    bottom + 28,
+                    0
+            );
 
-                ColumnText.showTextAligned(
-                        canvas,
-                        Element.ALIGN_RIGHT,
-                        new Phrase(
-                                "PAGE " + writer.getPageNumber(),
-                                footerFont
-                        ),
-                        right,
-                        bottom + 28,
-                        0
-                );
-
-            } catch (Exception exception) {
-                throw new IllegalStateException(
-                        "Unable to render PDF header or footer",
-                        exception
-                );
-            }
+            ColumnText.showTextAligned(
+                    canvas,
+                    Element.ALIGN_RIGHT,
+                    new Phrase(
+                            "PAGE " + writer.getPageNumber(),
+                            footerFont
+                    ),
+                    right,
+                    bottom + 28,
+                    0
+            );
         }
     }
 }
