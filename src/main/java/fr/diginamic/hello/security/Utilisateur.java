@@ -1,21 +1,63 @@
 package fr.diginamic.hello.security;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Table;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * Represents an authenticated application user.
- *
- * This class provides Spring Security with the username,
- * encoded password, authorities and account status.
+ * Represents an application user persisted with JPA.
  */
+@Entity
+@Table(name = "sec_utilisateur")
 public class Utilisateur implements UserDetails {
 
-    private final String username;
-    private final String password;
-    private final List<Role> roles;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(
+            nullable = false,
+            unique = true,
+            length = 100
+    )
+    private String username;
+
+    @Column(
+            name = "password_hash",
+            nullable = false,
+            length = 100
+    )
+    private String password;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "sec_utilisateur_role",
+            joinColumns = @JoinColumn(
+                    name = "utilisateur_id"
+            ),
+            inverseJoinColumns = @JoinColumn(
+                    name = "role_id"
+            )
+    )
+    private List<Role> roles = new ArrayList<>();
+
+    /**
+     * Required by JPA.
+     */
+    protected Utilisateur() {
+    }
 
     public Utilisateur(
             String username,
@@ -24,13 +66,21 @@ public class Utilisateur implements UserDetails {
 
         this.username = username;
         this.password = password;
-        this.roles = List.copyOf(roles);
+        this.roles = new ArrayList<>(roles);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public List<Role> getRoles() {
+        return roles;
     }
 
     /**
-     * Returns the authorities assigned to the user.
+     * Returns the roles used for authorization.
      *
-     * @return user authorities
+     * @return granted authorities
      */
     @Override
     public Collection<Role> getAuthorities() {
@@ -38,7 +88,7 @@ public class Utilisateur implements UserDetails {
     }
 
     /**
-     * Returns the encoded password.
+     * Returns the BCrypt password hash.
      *
      * @return encoded password
      */
@@ -47,11 +97,6 @@ public class Utilisateur implements UserDetails {
         return password;
     }
 
-    /**
-     * Returns the login identifier.
-     *
-     * @return username
-     */
     @Override
     public String getUsername() {
         return username;
