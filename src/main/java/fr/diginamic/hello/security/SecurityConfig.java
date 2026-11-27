@@ -12,7 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * TP06 - Security at the method level.
+ * TP07 - Content Security Policy configuration.
  */
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
@@ -27,10 +27,17 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
+        // Content Security Policy based on the course example.
+        String csp =
+                "script-src 'self' https://cdn.jsdelivr.net; "
+                        + "style-src 'self' 'unsafe-inline' "
+                        + "https://cdn.jsdelivr.net "
+                        + "https://cdnjs.cloudflare.com; "
+                        + "img-src 'self'; "
+                        + "font-src 'self' https://cdnjs.cloudflare.com;";
+
         http
-                // Keep CSRF protection for browser sessions.
-                // Allow Basic-authenticated API clients to send
-                // POST, PUT and DELETE during this exercise.
+                // Preserve TP06 CSRF handling for Basic Auth clients.
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
                         request -> {
                             String authorization =
@@ -43,20 +50,27 @@ public class SecurityConfig {
                         }
                 ))
 
-                // Keep HTTP Basic authentication for Postman.
+                // Preserve API authentication.
                 .httpBasic(Customizer.withDefaults())
 
-                // Keep the login form from TP05.
+                // Preserve the browser login form from TP05.
                 .formLogin(form -> form.permitAll())
 
-                // Keep browser sessions available.
+                // Preserve HTTP sessions from TP05.
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
                                 SessionCreationPolicy.IF_REQUIRED
                         )
                 )
 
-                // TP06: all application routes require a login.
+                // TP07 - Send the Content-Security-Policy header.
+                .headers(headers -> headers
+                        .contentSecurityPolicy(policy -> policy
+                                .policyDirectives(csp)
+                        )
+                )
+
+                // Preserve TP06: authentication is required.
                 // Roles are checked with @Secured on methods.
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()
