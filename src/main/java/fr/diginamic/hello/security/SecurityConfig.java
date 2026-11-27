@@ -2,8 +2,9 @@ package fr.diginamic.hello.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,9 +12,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * TP05 - Demonstration of HTTP sessions and JSESSIONID.
+ * TP06 - Security at the method level.
  */
 @Configuration
+@EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfig {
 
     @Bean
@@ -26,39 +28,40 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                // Keep HTTP Basic available for API clients.
+                // Keep CSRF protection for browser sessions.
+                // Allow Basic-authenticated API clients to send
+                // POST, PUT and DELETE during this exercise.
+                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                        request -> {
+                            String authorization =
+                                    request.getHeader(
+                                            HttpHeaders.AUTHORIZATION
+                                    );
+
+                            return authorization != null
+                                    && authorization.startsWith("Basic ");
+                        }
+                ))
+
+                // Keep HTTP Basic authentication for Postman.
                 .httpBasic(Customizer.withDefaults())
 
-                // Enable the Spring Security login form.
-                .formLogin(Customizer.withDefaults())
+                // Keep the login form from TP05.
+                .formLogin(form -> form.permitAll())
 
-                // Create an HTTP session when necessary.
+                // Keep browser sessions available.
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
                                 SessionCreationPolicy.IF_REQUIRED
                         )
                 )
 
-                // Configure access permissions.
+                // TP06: all application routes require a login.
+                // Roles are checked with @Secured on methods.
                 .authorizeHttpRequests(auth -> auth
-
-                        // Allow the login page and error page.
-                        .requestMatchers(
-                                "/login",
-                                "/error"
-                        ).permitAll()
-
-                        // GET requests require ROLE_USER.
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/**"
-                        ).hasRole("USER")
-
-                        // Other methods require ROLE_ADMIN.
-                        .anyRequest().hasRole("ADMIN")
+                        .anyRequest().authenticated()
                 );
 
-        // CSRF protection stays enabled for browser login.
         return http.build();
     }
 }

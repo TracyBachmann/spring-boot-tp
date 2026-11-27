@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,6 +58,7 @@ public class VilleControleur {
                     description = "Invalid pagination parameters"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping
     public Page<VilleDto> getVilles(
             @Parameter(
@@ -92,6 +94,7 @@ public class VilleControleur {
                     description = "City not found"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}")
     public VilleDto getVille(
             @Parameter(
@@ -121,6 +124,7 @@ public class VilleControleur {
                     description = "Department not found"
             )
     })
+    @Secured("ROLE_ADMIN")
     @PostMapping
     public VilleDto ajouterVille(
             @Valid @RequestBody VilleDto ville) {
@@ -146,6 +150,7 @@ public class VilleControleur {
                     description = "City or department not found"
             )
     })
+    @Secured("ROLE_ADMIN")
     @PutMapping("/{id}")
     public VilleDto modifierVille(
             @Parameter(
@@ -172,6 +177,7 @@ public class VilleControleur {
                     description = "City not found"
             )
     })
+    @Secured("ROLE_ADMIN")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> supprimerVille(
             @Parameter(
@@ -192,6 +198,7 @@ public class VilleControleur {
             responseCode = "200",
             description = "Search completed successfully"
     )
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/recherche/nom")
     public List<VilleDto> rechercherParNom(
             @Parameter(
@@ -213,6 +220,7 @@ public class VilleControleur {
             responseCode = "200",
             description = "Search completed successfully"
     )
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/recherche/population")
     public List<VilleDto> rechercherParPopulation(
             @Parameter(
@@ -240,6 +248,7 @@ public class VilleControleur {
                     description = "Invalid population interval"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/recherche/intervalle")
     public List<VilleDto> rechercherParIntervalle(
             @Parameter(
@@ -270,6 +279,7 @@ public class VilleControleur {
                     mediaType = "text/csv"
             )
     )
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(
             value = "/export/csv",
             produces = "text/csv"
@@ -289,7 +299,11 @@ public class VilleControleur {
                         "attachment; filename=\"villes.csv\""
                 )
                 .contentType(
-                        new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8)
+                        new MediaType(
+                                "text",
+                                "csv",
+                                java.nio.charset.StandardCharsets.UTF_8
+                        )
                 )
                 .body(contenu);
     }

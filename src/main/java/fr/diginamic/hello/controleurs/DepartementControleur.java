@@ -19,6 +19,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -64,6 +65,7 @@ public class DepartementControleur {
                     )
             )
     )
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping
     public List<DepartementDto> getDepartements() {
         return departementService.getDepartements();
@@ -88,6 +90,7 @@ public class DepartementControleur {
                     description = "Department not found"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}")
     public DepartementDto getDepartement(
             @Parameter(
@@ -100,7 +103,7 @@ public class DepartementControleur {
     }
 
     /**
-     * Creates a department.
+     * Creates a new department.
      */
     @Operation(summary = "Create a department")
     @ApiResponses({
@@ -113,6 +116,7 @@ public class DepartementControleur {
                     description = "Invalid data or duplicate department code"
             )
     })
+    @Secured("ROLE_ADMIN")
     @PostMapping
     public DepartementDto ajouterDepartement(
             @Valid @RequestBody DepartementDto dto) {
@@ -138,6 +142,7 @@ public class DepartementControleur {
                     description = "Department not found"
             )
     })
+    @Secured("ROLE_ADMIN")
     @PutMapping("/{id}")
     public DepartementDto modifierDepartement(
             @Parameter(
@@ -171,6 +176,7 @@ public class DepartementControleur {
                     description = "Department still contains cities"
             )
     })
+    @Secured("ROLE_ADMIN")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> supprimerDepartement(
             @Parameter(
@@ -204,6 +210,7 @@ public class DepartementControleur {
                     description = "Department not found"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}/villes/top")
     public List<VilleDto> plusGrandesVilles(
             @Parameter(
@@ -237,6 +244,7 @@ public class DepartementControleur {
                     description = "Department not found"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}/villes/min")
     public List<VilleDto> villesAuDessusPopulation(
             @Parameter(
@@ -274,6 +282,7 @@ public class DepartementControleur {
                     description = "Department not found"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping("/{id}/villes")
     public List<VilleDto> villesParPopulation(
             @Parameter(
@@ -298,7 +307,7 @@ public class DepartementControleur {
     }
 
     /**
-     * Exports a department and its cities as a PDF document.
+     * Exports a department and its cities as PDF.
      */
     @Operation(
             summary = "Export a department to PDF",
@@ -317,6 +326,7 @@ public class DepartementControleur {
                     description = "Department code not found"
             )
     })
+    @Secured({"ROLE_USER", "ROLE_ADMIN"})
     @GetMapping(
             value = "/{code}/export/pdf",
             produces = "application/pdf"
