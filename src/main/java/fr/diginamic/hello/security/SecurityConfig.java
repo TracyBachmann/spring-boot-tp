@@ -1,7 +1,6 @@
 package fr.diginamic.hello.security;
 
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,16 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * TP09 - Authentification JWT sans session HTTP.
- *
- * Sont conserves :
- * - utilisateurs et roles MariaDB (TP03)
- * - securite des methodes @Secured (TP06)
- * - Content Security Policy (TP07)
- * - configuration CORS (TP08)
- *
- * HTTP Basic et le formulaire de connexion sont
- * remplaces par une authentification JWT Bearer.
+ * Configures stateless JWT authentication and method-level authorization.
  */
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
@@ -40,42 +30,22 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * CORS : conserver le frontend local du TP08.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
-
-        configuration.setAllowedOrigins(
-                List.of(
-                        "http://localhost:4200",
-                        "http://127.0.0.1:4200"
-                )
-        );
-
-        // GET pour les villes.
-        // POST permet aussi d'appeler /login depuis un frontend.
-        configuration.setAllowedMethods(
-                List.of("GET", "POST", "OPTIONS")
-        );
-
-        configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type")
-        );
-
+        // Origins used by the local HTML exercise.
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:4200",
+                "http://127.0.0.1:4200"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
-
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
@@ -83,10 +53,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtUtil jwtUtil,
-            JpaUserDetailsService userDetailsService)
-            throws Exception {
+            JpaUserDetailsService userDetailsService) throws Exception {
 
-        // Content Security Policy du TP07.
         String csp =
                 "script-src 'self' https://cdn.jsdelivr.net; "
                         + "style-src 'self' 'unsafe-inline' "
@@ -95,73 +63,35 @@ public class SecurityConfig {
                         + "img-src 'self'; "
                         + "font-src 'self' https://cdnjs.cloudflare.com;";
 
-        // Filtre JWT cree explicitement.
         JwtAuthenticationFilter jwtFilter =
-                new JwtAuthenticationFilter(
-                        jwtUtil,
-                        userDetailsService
-                );
+                new JwtAuthenticationFilter(jwtUtil, userDetailsService);
 
         http
-                // Conserver CORS du TP08.
                 .cors(Customizer.withDefaults())
-
-                // TP09 : pas de session, pas de CSRF
-                // pour cette API authentifiee par Bearer.
                 .csrf(csrf -> csrf.disable())
-
-                // TP09 : aucune session HTTP d'authentification.
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
-
-                // Desactiver les anciens mecanismes.
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout.disable())
-
-                // Ne pas sauvegarder les requetes en session.
                 .requestCache(cache -> cache.disable())
-
-                // Garder la CSP du TP07.
                 .headers(headers -> headers
                         .contentSecurityPolicy(policy -> policy
-                                .policyDirectives(csp)
-                        )
-                )
-
-                // Retourner 401 plutot que rediriger vers un login.
+                                .policyDirectives(csp)))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(
                                 (request, response, exception) ->
                                         response.sendError(
-                                                HttpServletResponse.SC_UNAUTHORIZED
-                                        )
-                        )
-                )
-
-                // Seule la connexion POST est publique.
-                // Les roles restent controles par @Secured.
+                                                HttpServletResponse.SC_UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/login"
-                        ).permitAll()
-
+                        .requestMatchers(HttpMethod.POST, "/login").permitAll()
                         .requestMatchers("/error").permitAll()
-
-                        .anyRequest().authenticated()
-                )
-
-                // Executer notre filtre JWT avant
-                // les filtres d'authentification habituels.
+                        .anyRequest().authenticated())
                 .addFilterBefore(
                         jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 }
+

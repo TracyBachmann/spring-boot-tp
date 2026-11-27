@@ -3,7 +3,7 @@ package fr.diginamic.hello.dto;
 import jakarta.validation.constraints.NotBlank;
 
 /**
- * TP09 - Informations envoyees pour se connecter.
+ * Credentials submitted to the login endpoint.
  */
 public class LoginRequest {
 

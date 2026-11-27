@@ -2,9 +2,7 @@ package fr.diginamic.hello.controleurs;
 
 import fr.diginamic.hello.dto.LoginRequest;
 import fr.diginamic.hello.security.JwtUtil;
-
 import jakarta.validation.Valid;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * TP09 - Connexion et generation des JWT.
+ * Checks credentials and issues signed JWTs.
  */
 @RestController
 public class LoginController {
@@ -27,46 +25,29 @@ public class LoginController {
     public LoginController(
             AuthenticationConfiguration authenticationConfiguration,
             JwtUtil jwtUtil) {
-
-        this.authenticationConfiguration =
-                authenticationConfiguration;
-
+        this.authenticationConfiguration = authenticationConfiguration;
         this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * Verifie les identifiants dans MariaDB,
-     * puis retourne un JWT sous forme de texte.
-     */
-    @PostMapping(
-            value = "/login",
-            produces = MediaType.TEXT_PLAIN_VALUE
-    )
-    public String login(
-            @Valid @RequestBody LoginRequest requete)
+    @PostMapping(value = "/login", produces = MediaType.TEXT_PLAIN_VALUE)
+    public String login(@Valid @RequestBody LoginRequest request)
             throws Exception {
-
         try {
-
             authenticationConfiguration
                     .getAuthenticationManager()
                     .authenticate(
                             new UsernamePasswordAuthenticationToken(
-                                    requete.getUsername(),
-                                    requete.getPassword()
+                                    request.getUsername(),
+                                    request.getPassword()
                             )
                     );
-
         } catch (AuthenticationException exception) {
-
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Identifiants incorrects"
             );
         }
 
-        return jwtUtil.generateToken(
-                requete.getUsername()
-        );
+        return jwtUtil.generateToken(request.getUsername());
     }
 }

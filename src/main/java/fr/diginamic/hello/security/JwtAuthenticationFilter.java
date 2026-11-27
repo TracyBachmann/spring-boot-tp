@@ -1,12 +1,10 @@
 package fr.diginamic.hello.security;
 
 import io.jsonwebtoken.JwtException;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
@@ -18,12 +16,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * TP09 - Verification du JWT dans l'en-tete Authorization.
- *
- * Ce filtre est ajoute explicitement dans SecurityConfig.
+ * Authenticates requests carrying a signed Bearer token.
  */
-public class JwtAuthenticationFilter
-        extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
@@ -31,7 +26,6 @@ public class JwtAuthenticationFilter
     public JwtAuthenticationFilter(
             JwtUtil jwtUtil,
             UserDetailsService userDetailsService) {
-
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
     }
@@ -43,15 +37,10 @@ public class JwtAuthenticationFilter
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authorization = request.getHeader(
-                "Authorization"
-        );
+        String authorization = request.getHeader("Authorization");
 
-        // Sans jeton Bearer, on laisse Spring Security
-        // verifier si la route est accessible.
         if (authorization == null
                 || !authorization.startsWith("Bearer ")) {
-
             filterChain.doFilter(request, response);
             return;
         }
@@ -59,48 +48,34 @@ public class JwtAuthenticationFilter
         String token = authorization.substring(7).trim();
 
         try {
-
-            // Verifie la signature et l'expiration du JWT.
             String username = jwtUtil.extractUsername(token);
 
             if (username == null || username.isBlank()) {
-                throw new IllegalArgumentException(
-                        "JWT sans nom d'utilisateur"
-                );
+                throw new IllegalArgumentException("JWT sans nom d'utilisateur");
             }
 
-            // Recharge l'utilisateur et ses roles depuis MariaDB.
-            UserDetails utilisateur =
-                    userDetailsService.loadUserByUsername(
-                            username
-                    );
+            // Resolve current roles from the database, not from token claims.
+            UserDetails user = userDetailsService.loadUserByUsername(username);
 
-            // Construit l'authentification pour Spring Security.
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                            utilisateur,
+                            user,
                             null,
-                            utilisateur.getAuthorities()
+                            user.getAuthorities()
                     );
 
-            SecurityContext contexte =
-                    SecurityContextHolder.createEmptyContext();
-
-            contexte.setAuthentication(authentication);
-
-            SecurityContextHolder.setContext(contexte);
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(authentication);
+            SecurityContextHolder.setContext(context);
 
         } catch (JwtException
                  | IllegalArgumentException
                  | AuthenticationException exception) {
-
             SecurityContextHolder.clearContext();
-
             response.sendError(
                     HttpServletResponse.SC_UNAUTHORIZED,
                     "Jeton JWT invalide ou expire"
             );
-
             return;
         }
 
