@@ -1,6 +1,14 @@
 package fr.diginamic.hello.modeles;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,12 +23,19 @@ public class Departement {
     @Column(nullable = false, unique = true, length = 10)
     private String code;
 
-    // The supplied census SQL contains departments without a name.
+    // Some original census records have no department name.
     @Column(nullable = true)
     private String nom;
 
     @OneToMany(mappedBy = "departement")
     private List<Ville> villes = new ArrayList<>();
+
+    // TP04 - Last modification information.
+    @Column(name = "user_maj", length = 100)
+    private String userMaj;
+
+    @Column(name = "date_maj")
+    private LocalDateTime dateMaj;
 
     public Departement() {
     }
@@ -56,5 +71,21 @@ public class Departement {
 
     public List<Ville> getVilles() {
         return villes;
+    }
+
+    public String getUserMaj() {
+        return userMaj;
+    }
+
+    public void setUserMaj(String userMaj) {
+        this.userMaj = userMaj;
+    }
+
+    public LocalDateTime getDateMaj() {
+        return dateMaj;
+    }
+
+    public void setDateMaj(LocalDateTime dateMaj) {
+        this.dateMaj = dateMaj;
     }
 }

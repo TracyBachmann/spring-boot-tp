@@ -1,6 +1,16 @@
 package fr.diginamic.hello.modeles;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ville")
@@ -20,10 +30,21 @@ public class Ville {
     @JoinColumn(name = "id_dept", nullable = false)
     private Departement departement;
 
+    // TP04 - Last modification information.
+    @Column(name = "user_maj", length = 100)
+    private String userMaj;
+
+    @Column(name = "date_maj")
+    private LocalDateTime dateMaj;
+
     public Ville() {
     }
 
-    public Ville(String nom, int population, Departement departement) {
+    public Ville(
+            String nom,
+            int population,
+            Departement departement) {
+
         this.nom = nom;
         this.population = population;
         this.departement = departement;
@@ -59,5 +80,21 @@ public class Ville {
 
     public void setDepartement(Departement departement) {
         this.departement = departement;
+    }
+
+    public String getUserMaj() {
+        return userMaj;
+    }
+
+    public void setUserMaj(String userMaj) {
+        this.userMaj = userMaj;
+    }
+
+    public LocalDateTime getDateMaj() {
+        return dateMaj;
+    }
+
+    public void setDateMaj(LocalDateTime dateMaj) {
+        this.dateMaj = dateMaj;
     }
 }
