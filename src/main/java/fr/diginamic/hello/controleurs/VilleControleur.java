@@ -147,7 +147,7 @@ public class VilleControleur {
             ),
             @ApiResponse(
                     responseCode = "404",
-                    description = "City or department not found"
+                    description = "Department not found"
             )
     })
     @Secured("ROLE_ADMIN")
