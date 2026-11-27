@@ -10,9 +10,21 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
- * TP07 - Content Security Policy configuration.
+ * TP08 - Configuration CORS definitive.
+ *
+ * Les protections des TP precedents sont conservees :
+ * - TP03 : utilisateurs et roles dans MariaDB
+ * - TP05 : formulaire de connexion et sessions HTTP
+ * - TP06 : autorisations par @Secured
+ * - TP07 : Content Security Policy
+ * - TP08 : autorisation CORS du frontend local
  */
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
@@ -23,11 +35,49 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Autorise uniquement les deux adresses locales
+     * utilisees pour la page HTML du professeur.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration =
+                new CorsConfiguration();
+
+        configuration.setAllowedOrigins(
+                List.of(
+                        "http://localhost:4200",
+                        "http://127.0.0.1:4200"
+                )
+        );
+
+        configuration.setAllowedMethods(
+                List.of("GET", "OPTIONS")
+        );
+
+        configuration.setAllowedHeaders(
+                List.of("Authorization", "Content-Type")
+        );
+
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                configuration
+        );
+
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
 
-        // Content Security Policy based on the course example.
+        // Politique CSP du TP07.
         String csp =
                 "script-src 'self' https://cdn.jsdelivr.net; "
                         + "style-src 'self' 'unsafe-inline' "
@@ -37,7 +87,10 @@ public class SecurityConfig {
                         + "font-src 'self' https://cdnjs.cloudflare.com;";
 
         http
-                // Preserve TP06 CSRF handling for Basic Auth clients.
+                // TP08 : CORS reste active.
+                .cors(Customizer.withDefaults())
+
+                // Protection CSRF conservee depuis le TP06.
                 .csrf(csrf -> csrf.ignoringRequestMatchers(
                         request -> {
                             String authorization =
@@ -50,28 +103,29 @@ public class SecurityConfig {
                         }
                 ))
 
-                // Preserve API authentication.
+                // Authentification HTTP Basic pour les API.
                 .httpBasic(Customizer.withDefaults())
 
-                // Preserve the browser login form from TP05.
+                // Formulaire de connexion du TP05.
                 .formLogin(form -> form.permitAll())
 
-                // Preserve HTTP sessions from TP05.
+                // Sessions HTTP du TP05.
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
                                 SessionCreationPolicy.IF_REQUIRED
                         )
                 )
 
-                // TP07 - Send the Content-Security-Policy header.
+                // Content Security Policy du TP07.
                 .headers(headers -> headers
                         .contentSecurityPolicy(policy -> policy
                                 .policyDirectives(csp)
                         )
                 )
 
-                // Preserve TP06: authentication is required.
-                // Roles are checked with @Secured on methods.
+                // SECURITE RETABLIE :
+                // plus aucun acces public temporaire a /villes.
+                // Les roles sont controles avec @Secured.
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()
                 );
