@@ -1,8 +1,10 @@
 package fr.diginamic.hello.security;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -17,14 +20,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 /**
- * TP08 - Configuration CORS definitive.
+ * TP09 - Authentification JWT sans session HTTP.
  *
- * Les protections des TP precedents sont conservees :
- * - TP03 : utilisateurs et roles dans MariaDB
- * - TP05 : formulaire de connexion et sessions HTTP
- * - TP06 : autorisations par @Secured
- * - TP07 : Content Security Policy
- * - TP08 : autorisation CORS du frontend local
+ * Sont conserves :
+ * - utilisateurs et roles MariaDB (TP03)
+ * - securite des methodes @Secured (TP06)
+ * - Content Security Policy (TP07)
+ * - configuration CORS (TP08)
+ *
+ * HTTP Basic et le formulaire de connexion sont
+ * remplaces par une authentification JWT Bearer.
  */
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
@@ -36,8 +41,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Autorise uniquement les deux adresses locales
-     * utilisees pour la page HTML du professeur.
+     * CORS : conserver le frontend local du TP08.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -52,8 +56,10 @@ public class SecurityConfig {
                 )
         );
 
+        // GET pour les villes.
+        // POST permet aussi d'appeler /login depuis un frontend.
         configuration.setAllowedMethods(
-                List.of("GET", "OPTIONS")
+                List.of("GET", "POST", "OPTIONS")
         );
 
         configuration.setAllowedHeaders(
@@ -75,9 +81,12 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+            HttpSecurity http,
+            JwtUtil jwtUtil,
+            JpaUserDetailsService userDetailsService)
+            throws Exception {
 
-        // Politique CSP du TP07.
+        // Content Security Policy du TP07.
         String csp =
                 "script-src 'self' https://cdn.jsdelivr.net; "
                         + "style-src 'self' 'unsafe-inline' "
@@ -86,48 +95,71 @@ public class SecurityConfig {
                         + "img-src 'self'; "
                         + "font-src 'self' https://cdnjs.cloudflare.com;";
 
+        // Filtre JWT cree explicitement.
+        JwtAuthenticationFilter jwtFilter =
+                new JwtAuthenticationFilter(
+                        jwtUtil,
+                        userDetailsService
+                );
+
         http
-                // TP08 : CORS reste active.
+                // Conserver CORS du TP08.
                 .cors(Customizer.withDefaults())
 
-                // Protection CSRF conservee depuis le TP06.
-                .csrf(csrf -> csrf.ignoringRequestMatchers(
-                        request -> {
-                            String authorization =
-                                    request.getHeader(
-                                            HttpHeaders.AUTHORIZATION
-                                    );
+                // TP09 : pas de session, pas de CSRF
+                // pour cette API authentifiee par Bearer.
+                .csrf(csrf -> csrf.disable())
 
-                            return authorization != null
-                                    && authorization.startsWith("Basic ");
-                        }
-                ))
-
-                // Authentification HTTP Basic pour les API.
-                .httpBasic(Customizer.withDefaults())
-
-                // Formulaire de connexion du TP05.
-                .formLogin(form -> form.permitAll())
-
-                // Sessions HTTP du TP05.
+                // TP09 : aucune session HTTP d'authentification.
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
-                                SessionCreationPolicy.IF_REQUIRED
+                                SessionCreationPolicy.STATELESS
                         )
                 )
 
-                // Content Security Policy du TP07.
+                // Desactiver les anciens mecanismes.
+                .httpBasic(basic -> basic.disable())
+                .formLogin(form -> form.disable())
+                .logout(logout -> logout.disable())
+
+                // Ne pas sauvegarder les requetes en session.
+                .requestCache(cache -> cache.disable())
+
+                // Garder la CSP du TP07.
                 .headers(headers -> headers
                         .contentSecurityPolicy(policy -> policy
                                 .policyDirectives(csp)
                         )
                 )
 
-                // SECURITE RETABLIE :
-                // plus aucun acces public temporaire a /villes.
-                // Les roles sont controles avec @Secured.
+                // Retourner 401 plutot que rediriger vers un login.
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(
+                                (request, response, exception) ->
+                                        response.sendError(
+                                                HttpServletResponse.SC_UNAUTHORIZED
+                                        )
+                        )
+                )
+
+                // Seule la connexion POST est publique.
+                // Les roles restent controles par @Secured.
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/login"
+                        ).permitAll()
+
+                        .requestMatchers("/error").permitAll()
+
                         .anyRequest().authenticated()
+                )
+
+                // Executer notre filtre JWT avant
+                // les filtres d'authentification habituels.
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
         return http.build();
